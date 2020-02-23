@@ -770,6 +770,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin):
 
     def new_payment(self) -> None:
         from . import payment
+        from importlib import reload
+        reload(payment)
         self.w = payment.PaymentWindow(self._api, parent=self)
         self.w.show()
 
@@ -2069,9 +2071,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin):
 
     def change_password_dialog(self):
         from .password_dialog import ChangePasswordDialog
-        from .wallet_wizard import validate_password
         storage = self._wallet.get_storage()
-        d = ChangePasswordDialog(self, password_check_fn=partial(validate_password, storage))
+        d = ChangePasswordDialog(self, password_check_fn=storage.is_password_valid)
         ok, password, new_password = d.run()
         if not ok:
             return
@@ -2359,10 +2360,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin):
 
     def password_dialog(self, msg: Optional[str]=None, parent: Optional[QWidget]=None) -> str:
         from .password_dialog import PasswordDialog
-        from .wallet_wizard import validate_password
         parent = parent or self
         storage = self._wallet.get_storage()
-        d = PasswordDialog(parent, msg, password_check_fn=partial(validate_password, storage))
+        d = PasswordDialog(parent, msg, password_check_fn=storage.is_password_valid)
         return d.run()
 
     def tx_from_text(self, txt: str) -> Optional[Transaction]:

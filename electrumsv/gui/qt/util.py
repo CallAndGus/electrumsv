@@ -1,15 +1,16 @@
 import os.path
 from functools import partial, lru_cache
 import sys
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING, Union
 
 from PyQt5.QtCore import (pyqtSignal, Qt, QCoreApplication, QDir, QLocale, QProcess, QTimer,
     QModelIndex)
-from PyQt5.QtGui import QFont, QCursor, QIcon, QKeyEvent, QColor, QPalette
+from PyQt5.QtGui import QFont, QCursor, QIcon, QKeyEvent, QColor, QPalette, QPixmap
 from PyQt5.QtWidgets import (
-    QPushButton, QLabel, QMessageBox, QHBoxLayout, QDialog, QVBoxLayout, QLineEdit, QGroupBox,
-    QRadioButton, QFileDialog, QStyledItemDelegate, QTreeWidget, QButtonGroup,
-    QHeaderView, QWidget, QStyle, QToolButton, QToolTip, QPlainTextEdit, QTreeWidgetItem
+    QButtonGroup, QDialog, QGridLayout, QGroupBox, QMessageBox, QHBoxLayout, QHeaderView, QLabel,
+    QLayout, QLineEdit, QFileDialog, QFrame, QPlainTextEdit, QPushButton, QRadioButton, QSizePolicy,
+    QStyle, QStyledItemDelegate, QToolButton, QToolTip, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+    QWidget
 )
 from PyQt5.uic import loadUi
 
@@ -768,3 +769,98 @@ def create_new_wallet(parent: QWidget, initial_dirpath: str) -> Optional[str]:
     storage.close()
 
     return create_filepath
+
+
+FieldType = Union[QWidget, QLayout]
+
+class FormSectionWidget(QWidget):
+    show_help_label: bool = True
+    minimum_label_width: int = 80
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+
+        self.frame_layout = QVBoxLayout()
+
+        frame = QFrame()
+        frame.setObjectName("FormFrame")
+        frame.setLayout(self.frame_layout)
+
+        self.setStyleSheet("""
+        #FormSeparatorLine {
+            border: 1px solid #E3E2E2;
+        }
+
+        #FormSectionLabel {
+            color: #444444;
+        }
+
+        #FormFrame {
+            background-color: #F2F2F2;
+            border: 1px solid #E3E2E2;
+        }
+        """)
+
+        vlayout = QVBoxLayout()
+        vlayout.setContentsMargins(0, 0, 0, 0)
+        vlayout.addWidget(frame)
+        self.setLayout(vlayout)
+
+    def create_title(self, title_text: str) -> QLabel:
+        label = QLabel(title_text)
+        label.setObjectName("FormSectionTitle")
+        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        return label
+
+    def add_title(self, title_text: str) -> None:
+        label = self.create_title(title_text)
+        self.frame_layout.addWidget(label, Qt.AlignTop)
+
+    def add_title_row(self, title_object: FieldType) -> None:
+        if isinstance(title_object, QLayout):
+            self.frame_layout.addLayout(title_object)
+        else:
+            self.frame_layout.addWidget(title_object, Qt.AlignTop)
+
+    def add_row(self, label_text: Union[str, QLabel], field_object: FieldType,
+            stretch_field: bool=False) -> None:
+        if self.frame_layout.count() > 0:
+            line = QFrame()
+            line.setObjectName("FormSeparatorLine")
+            line.setFrameShape(QFrame.HLine)
+            line.setFixedHeight(1)
+            self.frame_layout.addWidget(line)
+
+        if isinstance(label_text, QLabel):
+            label = label_text
+        else:
+            if not label_text.endswith(":"):
+                label_text += ":"
+            label = QLabel(label_text)
+        label.setObjectName("FormSectionLabel")
+        label.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+
+        grid_layout = QGridLayout()
+        grid_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout.addWidget(label, 0, 0, Qt.AlignRight | Qt.AlignTop)
+        if stretch_field:
+            if isinstance(field_object, QLayout):
+                grid_layout.addLayout(field_object, 0, 1, Qt.AlignTop)
+            else:
+                grid_layout.addWidget(field_object, 0, 1, Qt.AlignTop)
+        else:
+            field_layout = QHBoxLayout()
+            field_layout.setContentsMargins(0, 0, 0, 0)
+            if isinstance(field_object, QLayout):
+                field_layout.addLayout(field_object)
+            else:
+                field_layout.addWidget(field_object)
+            field_layout.addStretch(1)
+            grid_layout.addLayout(field_layout, 0, 1, Qt.AlignTop)
+        grid_layout.setColumnMinimumWidth(0, self.minimum_label_width)
+        grid_layout.setColumnStretch(0, 0)
+        grid_layout.setColumnStretch(1, 1)
+        grid_layout.setHorizontalSpacing(10)
+        grid_layout.setSizeConstraint(QLayout.SetMinimumSize)
+
+        self.frame_layout.addLayout(grid_layout)

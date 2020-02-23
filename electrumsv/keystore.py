@@ -932,8 +932,8 @@ def instantiate_keystore(derivation_type: DerivationType, data: Dict[str, Any],
     return keystore
 
 def instantiate_keystore_from_text(text_type: KeystoreTextType, text_match: Union[str, List[str]],
-        password: str, derivation_text: Optional[str]=None, passphrase: Optional[str]=None,
-        watch_only: bool=False) -> KeyStore:
+        password: Optional[str], derivation_text: Optional[str]=None,
+        passphrase: Optional[str]=None, watch_only: bool=False) -> KeyStore:
     derivation_type: Optional[DerivationType] = None
     data: Dict[str, Any] = {}
     if text_type == KeystoreTextType.EXTENDED_PUBLIC_KEY:
@@ -947,6 +947,7 @@ def instantiate_keystore_from_text(text_type: KeystoreTextType, text_match: Unio
         assert isinstance(text_match, str)
         assert passphrase is None
         if not watch_only:
+            assert password is not None
             data['xprv'] = pw_encode(text_match, password)
         private_key = bip32_key_from_string(text_match)
         data['xpub'] = private_key.public_key.to_extended_key_string()
@@ -967,6 +968,7 @@ def instantiate_keystore_from_text(text_type: KeystoreTextType, text_match: Unio
         for n in bip32_decompose_chain_string(derivation_text):
             xprv = xprv.child_safe(n)
         if not watch_only:
+            assert password is not None
             data['xprv'] = pw_encode(xprv.to_extended_key_string(), password)
             data['seed'] = pw_encode(text_match, password)
             if passphrase is not None:
@@ -982,6 +984,7 @@ def instantiate_keystore_from_text(text_type: KeystoreTextType, text_match: Unio
         for n in bip32_decompose_chain_string(derivation_text):
             xprv = private_key.child_safe(n)
         if not watch_only:
+            assert password is not None
             data['xprv'] = pw_encode(xprv.to_extended_key_string(), password)
             data['seed'] = pw_encode(text_match, password)
             if passphrase is not None:
@@ -994,6 +997,7 @@ def instantiate_keystore_from_text(text_type: KeystoreTextType, text_match: Unio
         assert passphrase is None
         # `watch_only` is ignored.
         hex_seed = Old_KeyStore._seed_to_hex(text_match)
+        assert password is not None
         data['seed'] = pw_encode(hex_seed, password)
         data['mpk'] = Old_KeyStore._mpk_from_hex_seed(hex_seed)
     else:
